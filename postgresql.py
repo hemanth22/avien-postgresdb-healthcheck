@@ -1,12 +1,9 @@
-import psycopg2
-from psycopg2 import OperationalError
 import json
+import psycopg2
 import logging
-from uuid import uuid4
-from datetime import datetime
-import pytz
+import uuid
+import subprocess
 import os
-
 
 DB_HOST = os.environ.get('postgres_hostname')
 DB_NAME = os.environ.get('postgres_database')
@@ -14,63 +11,68 @@ DB_PORT = os.environ.get('postgres_port')
 DB_USER = os.environ.get('postgres_username')
 DB_PASSWORD = os.environ.get('postgres_password')
 
-# Configure logger
-logging.basicConfig(level=logging.INFO, format='%(message)s')
-logger = logging.getLogger(__name__)
-
-def log_json(status, message, details=None):
-    """
-    Log the heartbeat result in JSON format.
-    :param status: Status of the heartbeat (e.g., "OK" or "FAILED").
-    :param message: A short description of the result.
-    :param details: Optional additional details (e.g., error message).
-    """
-    # Get the current IST time
-    ist_timezone = pytz.timezone('Asia/Kolkata')
-    ist_timestamp = datetime.now(ist_timezone).isoformat()
-
-    log_entry = {
-        "uuid": str(uuid4()),  # Unique identifier for the log entry
-        "timestamp": ist_timestamp,  # IST timestamp
-        "status": status,
-        "message": message,
-        "details": details
-    }
-    logger.info(json.dumps(log_entry))
-
-def check_database_connection(config):
-    """
-    Function to check the PostgreSQL database connection.
-    :param config: Dictionary with database connection parameters.
-    :return: None
-    """
+# Function to get IP addresses using hostname -I
+def get_ip_addresses():
     try:
-        # Connect to the database
-        connection = psycopg2.connect(**config)
-        cursor = connection.cursor()
-        
-        # Execute a simple query
-        cursor.execute("SELECT 1;")
-        result = cursor.fetchone()
-        if result:
-            log_json(status="OK", message="Database heartbeat successful.")
-        
-        # Close the connection
-        cursor.close()
-        connection.close()
-    except OperationalError as e:
-        log_json(status="FAILED", message="Database heartbeat failed.", details=str(e))
+        output = subprocess.check_output(['hostname', '-I'])
+        return output.decode('utf-8').strip()
+    except subprocess.CalledProcessError as e:
+        return f"Error retrieving IP addresses: {e}"
 
-if __name__ == "__main__":
-    # Configuration for PostgreSQL database connection
-    config = {
-        "dbname": DB_NAME,
-        "user": DB_USER,
-        "password": DB_PASSWORD,
-        "host": DB_HOST,
-        "port": DB_PORT
-    }
-    
-    # Perform a single heartbeat check
-    check_database_connection(config)
+# Custom JSON Formatter for logging
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = {
+            'timestamp': self.formatTime(record),
+            'message': record.getMessage(),
+            'hostname': subprocess.check_output(['hostname']).decode('utf-8').strip(),
+            'ip_addresses': get_ip_addresses(),
+            'level': record.levelname,
+            'uuid': str(uuid.uuid4()),
+            
+        }
+        return json.dumps(log_record)
 
+# Configure logging with JSONFormatter
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+json_handler = logging.StreamHandler()
+json_handler.setFormatter(JSONFormatter())
+logger.addHandler(json_handler)
+
+# Database connection details
+
+
+db_config = {
+    "dbname": DB_NAME,
+    "user": DB_USER,
+    "password": DB_PASSWORD,
+    "host": DB_HOST,
+    "port": DB_PORT
+}
+
+# Connect to PostgreSQL database
+def check_database_status():
+    try:
+        with psycopg2.connect(**db_config) as connection:
+            with connection.cursor() as cursor:
+                logger.info("Database connection established.")
+            
+                #  Perform your database operations here
+                cursor.execute("SELECT 1;")
+                result = cursor.fetchone()
+                if result:
+                    logger.info(f"Database heartbeat successful")
+    except psycopg2.Error as e:
+        logger.error(f"Database connection failed: {e}")
+
+# Example function to log a message
+def log_heartbeat_status():
+    try:
+        # Assuming a function or method checks the database status
+        check_database_status()  # Replace with your actual function
+    except Exception as e:
+        logger.error(f"Database heartbeat failed: {e}")
+
+
+log_heartbeat_status()
