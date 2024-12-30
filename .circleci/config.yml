@@ -21,7 +21,7 @@ jobs:
             /usr/bin/python3.12 -m pip install pip --upgrade
             /usr/bin/python3.12 -m pip install -r requirements.txt
       - run:
-          name: Read Remainders stored in the database and send remainders
+          name: Postgresql Heartbeat job
           command: |
             ls -ltr
             /usr/bin/python3.12 postgresql.py
