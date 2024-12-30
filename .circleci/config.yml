@@ -24,10 +24,7 @@ jobs:
           name: Read Remainders stored in the database and send remainders
           command: |
             ls -ltr
-            /usr/bin/python3.12 telegram_group_snippet/tele_group.py
-            /usr/bin/python3.12 postgres_connect/postgres.py
-            /usr/bin/python3.12 redisdb_connect/redis_version.py
-            /usr/bin/python3.12 postgres_select.py
+            /usr/bin/python3.12 postgresql.py
       - run:
           name: System date
           command: |
