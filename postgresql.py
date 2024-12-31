@@ -1,78 +1,63 @@
-import json
-import psycopg2
-import logging
-import uuid
-import subprocess
+import psycopg2  # type: ignore
 import os
+import logging
+import json
+import uuid
+from datetime import datetime
 
-DB_HOST = os.environ.get('postgres_hostname')
-DB_NAME = os.environ.get('postgres_database')
-DB_PORT = os.environ.get('postgres_port')
-DB_USER = os.environ.get('postgres_username')
-DB_PASSWORD = os.environ.get('postgres_password')
+# Custom JSON logging function
+def log_json(level, message):
+    log_entry = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S IST"),
+        "message": message,
+        "traceid": str(uuid.uuid4()),
+    }
+    logger.log(level, json.dumps(log_entry))
 
-# Function to get IP addresses using hostname -I
-def get_ip_addresses():
-    try:
-        output = subprocess.check_output(['hostname', '-I'])
-        return output.decode('utf-8').strip()
-    except subprocess.CalledProcessError as e:
-        return f"Error retrieving IP addresses: {e}"
-
-# Custom JSON Formatter for logging
-class JSONFormatter(logging.Formatter):
-    def format(self, record):
-        log_record = {
-            'timestamp': self.formatTime(record),
-            'message': record.getMessage(),
-            'hostname': subprocess.check_output(['hostname']).decode('utf-8').strip(),
-            'ip_addresses': get_ip_addresses(),
-            'level': record.levelname,
-            'uuid': str(uuid.uuid4()),
-            
-        }
-        return json.dumps(log_record)
-
-# Configure logging with JSONFormatter
-logging.basicConfig(level=logging.DEBUG)
+# Configure logging
 logger = logging.getLogger(__name__)
-json_handler = logging.StreamHandler()
-json_handler.setFormatter(JSONFormatter())
-logger.addHandler(json_handler)
+handler = logging.StreamHandler()
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
-# Database connection details
+# Fetch environment variables
+postgres_hostname = os.environ.get('postgres_hostname')
+postgres_database = os.environ.get('postgres_database')
+postgres_port = os.environ.get('postgres_port')
+postgres_username = os.environ.get('postgres_username')
+postgres_password = os.environ.get('postgres_password')
 
+try:
+    # Establishing the connection
+    log_json(logging.INFO, "Attempting to connect to the PostgreSQL database...")
+    conn = psycopg2.connect(
+        database=postgres_database,
+        user=postgres_username,
+        password=postgres_password,
+        host=postgres_hostname,
+        port=postgres_port
+    )
 
-db_config = {
-    "dbname": DB_NAME,
-    "user": DB_USER,
-    "password": DB_PASSWORD,
-    "host": DB_HOST,
-    "port": DB_PORT
-}
+    # Creating a cursor object using the cursor() method
+    cursor = conn.cursor()
+    log_json(logging.INFO, "Cursor created successfully.")
 
-# Connect to PostgreSQL database
-def check_database_status():
-    try:
-        with psycopg2.connect(**db_config) as connection:
-            with connection.cursor() as cursor:
-                logger.info("Database connection established.")
-            
-                #  Perform your database operations here
-                cursor.execute("SELECT 1;")
-                result = cursor.fetchone()
-                if result:
-                    logger.info(f"Database heartbeat successful")
-    except psycopg2.Error as e:
-        logger.error(f"Database connection failed: {e}")
+    # Executing a PostgreSQL function using the execute() method
+    cursor.execute("SELECT version()")
+    log_json(logging.INFO, "Executed query: SELECT version()")
 
-# Example function to log a message
-def log_heartbeat_status():
-    try:
-        # Assuming a function or method checks the database status
-        check_database_status()  # Replace with your actual function
-    except Exception as e:
-        logger.error(f"Database heartbeat failed: {e}")
+    # Fetch a single row using fetchone() method.
+    data = cursor.fetchone()
+    log_json(logging.INFO, f"Connection established to: {data}")
+    log_json(logging.INFO, "Database heartbeat is successful.")
 
+except psycopg2.Error as e:
+    log_json(logging.ERROR, f"An error occurred while connecting to the database: {e}")
 
-log_heartbeat_status()
+finally:
+    # Closing the connection
+    if conn:
+        conn.close()
+        log_json(logging.INFO, "Database connection closed, will connect in next run")
+    if not conn:
+        log_json(logging.ERROR, "Database connection not established, kindly investigate the issue")
