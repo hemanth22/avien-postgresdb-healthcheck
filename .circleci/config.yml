@@ -13,7 +13,7 @@ jobs:
       - run:
           name: Print Python Verson
           command: |
-            dnf install python312 python3-pip -y
+            dnf install python312 python3-pip postgresql -y
             python3 -V
             python3 -m pip install requests
             /usr/bin/python3.12 -V
