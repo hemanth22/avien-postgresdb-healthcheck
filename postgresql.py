@@ -21,9 +21,9 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 # Fetch environment variables
-postgres_hostname = os.environ.get('postgres_hostname','127.0.0.1')
+postgres_hostname = os.environ.get('postgres_hostname')
 postgres_database = os.environ.get('postgres_database')
-postgres_port = os.environ.get('postgres_port','5432')
+postgres_port = os.environ.get('postgres_port')
 postgres_username = os.environ.get('postgres_username')
 postgres_password = os.environ.get('postgres_password')
 conn = None
