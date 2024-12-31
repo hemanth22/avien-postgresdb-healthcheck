@@ -33,7 +33,7 @@ jobs:
 workflows:
   db_healthcheck_app:
     jobs:
-      - build
+      - build:
           filters:
             branches:
               only:
