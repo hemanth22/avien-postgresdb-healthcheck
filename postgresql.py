@@ -26,7 +26,7 @@ postgres_database = os.environ.get('postgres_database')
 postgres_port = os.environ.get('postgres_port')
 postgres_username = os.environ.get('postgres_username')
 postgres_password = os.environ.get('postgres_password')
-
+conn = None
 try:
     # Establishing the connection
     log_json(logging.INFO, "Attempting to connect to the PostgreSQL database...")
