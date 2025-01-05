@@ -43,7 +43,7 @@ try:
     log_json(logging.INFO, "Cursor created successfully.")
 
     # Executing a PostgreSQL function using the execute() method
-    cursor.execute("SELECT version()")
+    cursor.execute("SELECT message FROM heartbeats;")
     log_json(logging.INFO, "Executed query: SELECT version()")
 
     # Fetch a single row using fetchone() method.
