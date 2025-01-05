@@ -61,8 +61,10 @@ def heartbeat():
         log_json(logging.INFO, "Database heartbeat is successful.")
 
         if data:
-            telegram_send_message(f"Database heartbeat is successful. 35=0")
-            return data;
+            telegram_send_message(f"Database heartbeat is successful.")
+            return data
+        if not data:
+            telegram_send_message(f"Database heartbeat is unsuccessful.")
 
     except psycopg2.Error as e:
         log_json(logging.ERROR, f"An error occurred while connecting to the database: {e}")
