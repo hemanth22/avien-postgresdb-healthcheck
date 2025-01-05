@@ -32,7 +32,7 @@ conn = None
 
 
 def telegram_send_message(message):
-    url = "https://api.telegram.org/bot{}/sendMessage?chat_id=-1001943848370&text={}".format(bot_token, message)
+    url = "https://api.telegram.org/bot{}/sendMessage?chat_id=-1002266504611&text={}".format(bot_token, message)
     requests.get(url)
 
 def heartbeat():
